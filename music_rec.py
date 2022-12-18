@@ -74,11 +74,8 @@ def menu(user_name, user_data):
             recs = get_recs(user_name, user_data)
             print_recs(recs)
         elif choice == 'q':
-            try:
-                update_db(user_name, user_data, pref_file, user_data[user_name])
-                break
-            except:
-                break
+            update_db(user_name, user_data, pref_file, user_data[user_name])
+            break
 
 def mostpopular(userInfo):
     """Returns the most popular artist , will return upto 3 artists if there is a tie in votes.
