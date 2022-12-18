@@ -68,6 +68,17 @@ def menu(user_name, user_data):
             UserLikeMost(user_data)
         elif choice == 's':
             show_preferences(user_name, user_data)
+        elif choice == 'e':
+            enter_preferences(user_name, user_data, pref_file)
+        elif choice == 'r':
+            recs = get_recs(user_name, user_data)
+            print_recs(recs)
+        elif choice == 'q':
+            try:
+                update_db(user_name, user_data, pref_file, user_data[user_name])
+                break
+            except:
+                break
 
 def mostpopular(userInfo):
     """Returns the most popular artist , will return upto 3 artists if there is a tie in votes.
@@ -208,4 +219,176 @@ def show_preferences(user_name, user_data):
     print(result)
     return result
 
+def exclude_helper(dic):
+    """Used as a helper function for exclude
+       Makes a list of indices of keys which end with $
+       
+       Input: Dictionary name
+       Output: List with indices """
+    
+    keys = list(dic.keys())
+    k = []
+    for i in range(len(keys)):
+        if keys[i][-1] == "$":
+            k.append(i)
+            i += 1
+    return k
+
+def exclude(dic):
+    """Removes keys which end with $ using indices from helper function
+
+       Input: Dictionary
+       Output: Updated dictionary which now excludes private users."""
+    
+    i = 0
+    index = exclude_helper(dic)
+    delete = []
+    for key in dic.keys():
+        if i in index:
+            delete.append(key)
+        i += 1
+    for key in delete:
+        if key in dic:
+            del dic[key]
+    return dic
+
+def enter_preferences(user_name, user_data, pref_file):
+    '''Through this function a user is asked to enter the artists name. If the user name exists in the file name then 
+    the entered artists name is appended to the preferences list if it wasn't existing earlier in the list'''
+    
+    preferences = []
+
+    if user_name not in user_data:
+
+        new_pref = input("Enter an artist that you like (Enter to finish):")
+        while new_pref != '':
+            
+            if new_pref not in preferences:
+                preferences.append(new_pref)
+
+            new_pref = input("Enter an artist that you like (Enter to finish):")
+            
+    else:
+        preferences = user_data[user_name]
+
+        new_pref = input("Enter an artist that you like ( Enter to finish ):")
+        while new_pref != '':
+            if new_pref not in preferences:
+                preferences.append(new_pref)
+
+            new_pref = input("Enter an artist that you like (Enter to finish):")    
+    
+    preferences.sort()
+
+    artists_list = [x.title() for x in preferences]
+    artists_list.sort()
+    
+    update_db(user_name, user_data, pref_file, artists_list)
+    menu(user_name, user_data)
+
+def update_db(user_name, user_data, pref_file, preferences):
+    '''This function is used to keep the database updated. It stores the most recent changes made by the user to their
+    preferences list.'''
+
+    user_data[user_name] = preferences
+
+    file = open(pref_file, 'w')
+
+    for user in sorted(user_data.keys()):
+        toSave = str(user) + ':' + ','.join(user_data[user]) + '\n'        
+        file.write(toSave)
+    file.close()
+
+def print_recs(recs):
+    '''This function is used to print the name of the recommended artists'''
+    if len(recs) == 0 or recs==[]:
+        
+        print("No recommendations available at this time.")
+    else:
+        print('\n'.join(recs))
+
+def numMatches(list1, list2):
+    '''This function returns the number of matches that the given two lists has between them.'''
+    matches = 0
+    i = 0
+    j = 0
+
+    while i<len(list1) and j<len(list2):
+
+        if list1[i] == list2[j]:
+            matches += 1
+            i += 1
+            j += 1
+        elif list1[i]<list2[j]:
+            i += 1
+        else:
+            j += 1
+    return matches
+
+def get_recs(user_name, user_data):
+    '''Through this function the user gets a recommendation of artists. The artist's list of the user that has logged in
+    is compared with list of artists of all the other users.'''
+    list_of_users = user_data.keys()
+    
+    if(len(list_of_users) == 1):
+        return []
+      
+    matched_user = None
+    max_match = 0
+
+    for user in list_of_users:
+
+        if user[-1] == "$":
+            continue
+        elif user_data[user] == []:
+            continue
+        elif user_data[user] != user_data[user_name]:
+            given_user = user_data[user_name]
+            to_compare_user = user_data[user]
+            num_matches = numMatches(given_user, to_compare_user)
+
+            if num_matches>max_match:
+                max_match = num_matches
+                matched_user = user
+            elif num_matches == max_match:
+                continue
+
+    artist_list = []
+    artist_list = artist_list + dropMatches(user_data[user_name], user_data[matched_user])
+
+    unique_artist_list = []
+
+    for x in artist_list:
+        if x not in unique_artist_list:
+            unique_artist_list.append(x)
+
+    return unique_artist_list
+
+def dropMatches(list1, list2):
+    '''This function is used to drop the names of artists that exists in both the given lists. It returns back a list 
+    of artists which are not present in the first list'''
+
+    list1.sort()
+    list2.sort()
+
+    req_list = []
+    i = 0
+    j = 0
+
+    while i<len(list1) and j<len(list2):
+
+        if list1[i] == list2[j]:
+            i += 1
+            j += 1
+        elif list1[i] < list2[j]:
+            i += 1
+        else:
+            req_list.append(list2[j])
+            j += 1
+
+    while j<len(list2):
+        req_list.append(list2[j])
+        j += 1
+
+    return req_list
 main()
